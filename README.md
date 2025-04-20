@@ -1,94 +1,75 @@
-# 🤖 CVE Discord Bot - Veille Cyber
+# 🛡️ Discord CVE Bot
 
-Un bot Discord open-source pour la **surveillance automatique des vulnérabilités CVE**.
+Un bot Discord qui surveille les vulnérabilités CVE et informe automatiquement dans des salons textuels organisés par technologie.
 
-Il classe, notifie et organise les failles en créant automatiquement des salons textuels classés par technologies.
+## ✅ Fonctionnalités
 
----
+- Récupération automatique des dernières CVE depuis l’API officielle de la NVD.
+- Création de salons Discord selon les catégories détectées (`windows`, `php`, `cisco`, etc.).
+- Ping du rôle `@alert-cve` pour les failles critiques (CVSS ≥ 7).
+- Résumé automatique des failles toutes les 6h.
+- Commandes **slash** simples et efficaces.
+- Fallback vers `#autres_cve` si aucune catégorie ne correspond.
 
-## 🚀 Fonctionnalités principales
+## 🚀 Installation
 
-- ✨ **Récupère automatiquement les CVE depuis [nvd.nist.gov](https://nvd.nist.gov)**
-- 🌐 **Création automatique de salons textuels** par technologie (“php”, “windows”, etc.)
-- ⚡ **Ping d'un rôle `@alert-cve`** en cas de criticité élevée (CVSS >= 7)
-- 🔍 **Analyse régulière toutes les 6h** et publication d'un résumé dans `#cve-resume-quotidien`
-- ❓ **Catégories personnalisables** via `categories.json`
-- ✉️ **Commandes Discord pour interagir et forcer les analyses**
+### 1. Cloner le projet
 
----
+```bash
+git clone https://github.com/ton-repo/discord-cve-bot.git
+cd discord-cve-bot
+```
 
-## 🧰 Librairies Python requises
+### 2. Installer les dépendances
 
-Installez les dépendances avec :
 ```bash
 pip install discord.py python-dotenv requests
 ```
 
----
+### 3. Créer le fichier `.env`
 
-## 🗂️ Fichiers importants
-
-| Fichier | Rôle |
-|--------|------|
-| `bot.py` | Le cœur du bot (le script principal) |
-| `categories.json` | Liste des mots-clés technos à surveiller |
-| `cve_cache.json` | Empêche les doublons (cache local) |
-| `.env` | Contient vos clés sécurisées |
-
----
-
-## 🔁 Mises à jour automatiques
-
-- Le bot lance une vérification **toutes les 6h**.
-- Le résumé s'affiche dans `#cve-resume-quotidien`
-- Les CVE critiques pingent le rôle `@alert-cve`
-- Les CVE sans mot-clé connu vont dans `#autres_cve`
-
----
-
-## 🧭 Commandes disponibles
-
-| Commande | Description |
-|---------|-------------|
-| `!force` | Analyse des CVE des 3 derniers jours |
-| `!force_all <jours>` | Analyse des CVE jusqu'à 1000 jours (ignore le cache) |
-| `!ajout_categorie <mot>` | Ajoute une techno personnalisée à `categories.json` |
-| `!status` | Affiche la date de la dernière vérification |
-| `!aide` | Affiche ce menu |
-
----
-
-## 🚀 Fonctionnement technique
-
-- Le bot utilise l'API NVD v2.0 avec filtrage sur les dates
-- Utilisation de `ThreadPoolExecutor` pour accélérer les requêtes multiples
-- Analyse des titres/descriptions CVE pour détection des technos
-- Réduction de la charge Discord via envoi en morceaux (1990 char max)
-
----
-
-## 📊 Exemple de message CVE
+```env
+DISCORD_TOKEN=TON_TOKEN_DISCORD
+NVD_API_KEY=TA_CLÉ_API_NVD
 ```
-🔴 CVE-2025-12345 - Critique (CVSS 9.8)
-Buffer overflow in XYZ
-🔗 https://nvd.nist.gov/vuln/detail/CVE-2025-12345
+
+Tu peux obtenir une clé API gratuite ici : [nvd.nist.gov](https://nvd.nist.gov/developers/request-an-api-key)
+
+### 4. Lancer le bot
+
+```bash
+python bot.py
+```
+
+## 💬 Commandes Slash disponibles
+
+| Commande               | Description |
+|------------------------|-------------|
+| `/force`               | Analyse les 3 derniers jours (cache utilisé) |
+| `/force_all <jours>`   | Analyse toutes les CVE des X derniers jours (ignore le cache) |
+| `/ajout_categorie <mot>` | Ajoute un mot-clé à la liste des catégories |
+| `/status`              | Dernière date de vérification |
+| `/cve_info <CVE-ID>`   | Détail d’une CVE spécifique |
+| `/aide`                | Affiche l’aide |
+
+## 🗂 Fichiers importants
+
+| Fichier               | Rôle |
+|-----------------------|------|
+| `bot.py`              | Script principal |
+| `categories.json`     | Liste des mots-clés surveillés |
+| `cve_cache.json`      | Liste des CVE déjà traitées |
+| `.env`                | Jeton Discord + API Key NVD |
+
+## 📦 Exemple de `.gitignore`
+
+```gitignore
+.env
+__pycache__/
+*.pyc
+cve_cache.json
 ```
 
 ---
 
-## ⚠️ Permissions recommandées
-- Envoyer des messages
-- Créer des salons
-- Gérer les rôles (pour `@alert-cve`)
-
----
-
-## 🌟 Améliorations possibles
-- Site web de consultation des CVE
-- Base de données persistante avec historisation
-- Interaction Webhook/Slash Commands
-
----
-
-## 🙏 Merci !
-Ce projet est en constante amélioration. Forkez-le, testez-le, et surtout : restez à jour en cybersécurité !
+Déployé et prêt à défendre ton serveur des vulnérabilités 👨‍💻🛡️
