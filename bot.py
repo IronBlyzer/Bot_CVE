@@ -105,23 +105,35 @@ async def aide(interaction: discord.Interaction):
 """
     await interaction.response.send_message(commands_list)
 
+
 @tree.command(name="cve_info", description="Afficher les infos détaillées d'une CVE")
 async def cve_info(interaction: discord.Interaction, cve_id: str):
     headers = {
         "User-Agent": "Discord CVE Bot",
         "apiKey": NVD_API_KEY
     }
-    url = f"https://services.nvd.nist.gov/rest/json/cve/1.0/{cve_id}"
+    url_v1 = f"https://services.nvd.nist.gov/rest/json/cve/1.0/{cve_id}"
+    url_v2 = f"https://services.nvd.nist.gov/rest/json/cves/2.0?cveId={cve_id}"
     try:
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url_v1, headers=headers, timeout=10)
         response.raise_for_status()
         data = response.json()
         cve = data.get("result", {}).get("CVE_Items", [])[0]
         desc = cve.get("cve", {}).get("description", {}).get("description_data", [{}])[0].get("value", "No description")
-        link = f"https://nvd.nist.gov/vuln/detail/{cve_id}"
-        await interaction.response.send_message(f"🔍 **{cve_id}**\n{desc}\n🔗 {link}")
-    except Exception as e:
-        await interaction.response.send_message(f"❌ Impossible de récupérer les infos pour {cve_id}.")
+    except:
+        try:
+            response = requests.get(url_v2, headers=headers, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            vuln = data.get("vulnerabilities", [])[0].get("cve", {})
+            desc = next((d["value"] for d in vuln.get("descriptions", []) if d["lang"] == "fr"),
+                        next((d["value"] for d in vuln.get("descriptions", []) if d["lang"] == "en"), "No description"))
+        except:
+            await interaction.response.send_message(f"❌ Impossible de récupérer les infos pour {cve_id}.")
+            return
+    link = f"https://nvd.nist.gov/vuln/detail/{cve_id}"
+    await interaction.response.send_message(f"🔍 **{cve_id}**\n{desc}\n🔗 {link}")
+
 
 @tasks.loop(hours=6)
 async def daily_summary():
