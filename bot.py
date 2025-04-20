@@ -77,7 +77,7 @@ async def force_all(ctx, jours: int = 1000):
 @bot.command()
 async def force(ctx):
     guild = ctx.guild
-    await ctx.send("🔄 Analyse forcée des CVE...")
+    await ctx.send("🔄 Analyse forcée des CVE (3 derniers jours)...")
     await check_cve(guild, days=3)
     await ctx.send("✅ Terminé.")
 
@@ -93,7 +93,7 @@ async def help_command(ctx):
     commands_list = """
 📖 **Commandes disponibles :**
 
-`!force` → Analyse les CVE récentes (en utilisant le cache)
+`!force` → Analyse les CVE récentes (3 derniers jours, en utilisant le cache)
 `!force_all <jours>` → Analyse toutes les CVE des X derniers jours (ignore le cache)
 `!ajout_categorie <mot>` → Ajoute une nouvelle catégorie à surveiller
 `!status` → Affiche la date de la dernière vérification
@@ -101,21 +101,21 @@ async def help_command(ctx):
 """
     await ctx.send(commands_list)
 
-def fetch_chunk(start, end, headers):
-    params = {
-        "resultsPerPage": 2000,
-        "startIndex": 0,
-        "pubStartDate": start.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-        "pubEndDate": end.strftime("%Y-%m-%dT%H:%M:%S.000Z")
-    }
-    try:
-        response = requests.get("https://services.nvd.nist.gov/rest/json/cves/2.0", params=params, headers=headers, timeout=15)
-        response.raise_for_status()
-        data = response.json()
-        return data.get("vulnerabilities", [])
-    except Exception as e:
-        print(f"Erreur sur la période {start} → {end} : {e}")
-        return []
+@tasks.loop(hours=6)
+async def daily_summary():
+    for guild in bot.guilds:
+        await check_cve(guild)
+        if not summary_buffer:
+            continue
+        channel = discord.utils.get(guild.text_channels, name=DAILY_SUMMARY_CHANNEL)
+        if not channel:
+            channel = await guild.create_text_channel(DAILY_SUMMARY_CHANNEL)
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        text = f"🗓 **Résumé des CVE du {date_str}**\n\n" + "\n".join(summary_buffer)
+        for chunk in [text[i:i+1990] for i in range(0, len(text), 1990)]:
+            await channel.send(chunk)
+        summary_buffer.clear()
+
 
 def fetch_latest_cve(days=1):
     end_date = datetime.utcnow()
@@ -145,20 +145,22 @@ def fetch_latest_cve(days=1):
                 })
     return all_results
 
-@tasks.loop(hours=6)
-async def daily_summary():
-    for guild in bot.guilds:
-        await check_cve(guild)
-        if not summary_buffer:
-            continue
-        channel = discord.utils.get(guild.text_channels, name=DAILY_SUMMARY_CHANNEL)
-        if not channel:
-            channel = await guild.create_text_channel(DAILY_SUMMARY_CHANNEL)
-        date_str = datetime.now().strftime("%Y-%m-%d")
-        text = f"🗓 **Résumé des CVE du {date_str}**\n\n" + "\n".join(summary_buffer)
-        for chunk in [text[i:i+1990] for i in range(0, len(text), 1990)]:
-            await channel.send(chunk)
-        summary_buffer.clear()
+def fetch_chunk(start, end, headers):
+    params = {
+        "resultsPerPage": 2000,
+        "startIndex": 0,
+        "pubStartDate": start.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+        "pubEndDate": end.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    }
+    try:
+        response = requests.get("https://services.nvd.nist.gov/rest/json/cves/2.0", params=params, headers=headers, timeout=15)
+        response.raise_for_status()
+        data = response.json()
+        return data.get("vulnerabilities", [])
+    except Exception as e:
+        print(f"Erreur sur la période {start} → {end} : {e}")
+        return []
+
 
 async def check_cve(guild, ignore_cache=False, days=1):
     global last_check_time
